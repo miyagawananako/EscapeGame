@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>脱出ゲーム</title>
+	<style type="text/css">
+		div#canvas-frame{
+		border: none;
+		cursor: pointer;
+		width: 1200px;
+		height: 900px;
+		background-color: white;
+		}
+	#backbutton{
+			margin-left: 30px;
+		  }
+  </style>
+
+	<audio controls src="堕ちる.mp3"></audio>
+	<div id="output", style= "display: inline-block; _display: inline;">鍵穴があるようだ。</div>
+    <button id="turnbutton", onclick="turn()">鍵を回す</button>
+    <button id="openbutton", onclick="checkkey()">鍵を開ける</button>
+	<button id="backbutton", onclick="location.href='room3.html'">さきほどの部屋に戻る</button>
+
+    <script src="three.min.js"></script>
+    <script src="https://unpkg.com/three@0.131.3/examples/js/controls/OrbitControls.js"></script>
+
+	<audio id="btn_audio">
+		<source src="se-740461120.mp3" type="audio/mp3">
+	</audio>
+	<audio id="btn_audio2">
+		<source src="turning_a_lock2.mp3" type="audio/mp3">
+	</audio>
+	<audio id="btn_audio3">
+		<source src="033_se_kirakira13.mp3" type="audio/mp3">
+	</audio>
+	
+    <script>
+
+      //https://www.is.ocha.ac.jp/~yuki/CG/homework-WebGL.html
+
+      //これからすること、カーテンの設置、左の壁の設置、天井の設置、ゲームの設計、机の上に置くボックスの設計
+      var width, height;
+      var renderer;
+
+      function initThree() {
+	  width = document.getElementById('canvas-frame').clientWidth;
+	  height = document.getElementById('canvas-frame').clientHeight;  
+	  
+	  renderer = new THREE.WebGLRenderer({antialias: true});
+	  renderer.setSize(width, height );
+	  document.getElementById('canvas-frame').appendChild(renderer.domElement);
+	  renderer.setClearColorHex(0x000000, 1.0);
+	  renderer.shadowMapEnabled = true;
+
+      }
+
+
+      var camera;
+	  var controls;
+      function initCamera() {  
+	  camera = new THREE.PerspectiveCamera( 45 , width / height , 1 , 10000 );
+	  camera.position.x = 1100;
+	  camera.position.y = -100;
+	  camera.position.z = 400;
+	  camera.up.x = 0;
+	  camera.up.y = 0;
+	  camera.up.z = 1;
+	  camera.lookAt( {x:0, y:0, z:0 } );
+      }
+
+
+      var scene;
+      function initScene() {    
+	  scene = new THREE.Scene();
+      }
+
+
+      var light, light2;
+      function initLight() {  
+	  light = new THREE.DirectionalLight(0xFFFFFF, 1.0, 0);
+	  light.position.set( 50, 0, 100 ); //yをマイナスにすると壁が明るくなって見える
+	  light.castShadow = true;    
+	  scene.add(light);
+	  light2 = new THREE.AmbientLight(0x555555);
+	  scene.add(light2);
+      }
+
+      const tile_side_length = 20;
+      const side_length = tile_side_length**2; // 20**2
+
+
+      var leg = Array();
+	  var cylinder,plane;
+	  var tile = Array();
+	  var trump_heart = Array();
+	  var wall_back, door, knob, wall_left, tree, stem, pot, face, eye_right, eye_left, leg_right, leg_left, arm_right, arm_left,
+	  clock, clock_frame, hole, short_hand, soldier, paper;
+	  var character = Array();
+      var openflag = false;
+
+      function initObject(){
+	  var roomobjects = new THREE.Group(); //メッシュをグループ化
+
+      const geometry = new THREE.BoxGeometry( side_length/3, side_length/3*2, 1 );
+	  const material = new THREE.MeshBasicMaterial( {color: 0x000000, ambient: 0x696969} );
+      door = new THREE.Mesh( geometry, material );
+	  roomobjects.add(door);
+	  door.rotation.x = Math.PI / 2; // 壁を水平に配置するために90度回転
+	  door.rotation.y = Math.PI / 2;
+	  door.position.set(-side_length/2, 0, side_length/3*2/2);
+	  door.castShadow = true;
+
+	  knob = new THREE.Mesh(
+	      new THREE.CylinderGeometry(300, 300, 100, 32),
+	      new THREE.MeshLambertMaterial({ color: 0xffffff })
+	  );
+	  roomobjects.add(knob);
+	  knob.rotation.z = Math.PI / 2
+	  knob.position.set(-side_length/2, side_length/3/2 - 15, side_length/3*2/2);
+	  knob.castShadow = true;
+
+      hole = new THREE.Mesh(
+          new THREE.CubeGeometry(500,100,120),
+	      new THREE.MeshLambertMaterial({ color: 0x000000, ambient:0x8b4513 })
+	  );
+	  roomobjects.add(hole);
+      hole.rotation.y = Math.PI / 2
+	  hole.position.set(-side_length/2, side_length/3/2 - 15, side_length/3*2/2);
+	  hole.castShadow = true;
+
+	  scene.add(roomobjects);
+      }
+
+	var t = 0;
+	  function loop() {
+		t++;
+		renderer.clear();
+		//cube[0].rotation.set( t/100, 0, 0 );
+		//camera.position.set( 1000*Math.cos(t/100), 400*Math.sin(t/200), 50*Math.cos(t/50));
+		camera.lookAt( {x:0, y:0, z:0 } );    
+		renderer.render(scene, camera);
+		window.requestAnimationFrame(loop);
+		}  
+
+		function audio2(){
+		document.getElementById('btn_audio2').currentTime = 0; //連続クリックに対応
+    	document.getElementById('btn_audio2').play(); //クリックしたら音を再生
+	}
+
+        var count = 0;
+        function turn(){
+            openflag = false;
+            count ++;
+			hole.rotation.z = Math.PI / 8 * count;
+			if(count%8 == 6){
+                openflag = true;
+            }
+			audio2();
+        }
+
+		function audio() {
+            document.getElementById('btn_audio').currentTime = 0; //連続クリックに対応
+            document.getElementById('btn_audio').play(); //クリックしたら音を再生
+        }
+
+		function audio3() {
+            document.getElementById('btn_audio3').currentTime = 0; //連続クリックに対応
+            document.getElementById('btn_audio3').play(); //クリックしたら音を再生
+        }
+
+        function checkkey(){
+            if(openflag){
+				audio3();
+				showOutput2();
+				setTimeout('window.location.href = "goal.html";', 2000);
+            }
+			else{
+				audio();
+				showOutput();
+			}
+        }
+
+      function threeStart() {
+	  initThree();
+	  initCamera();
+	  initScene();  
+	  initLight();
+	  initObject();
+	  loop();
+      }
+
+	  function showOutput() {
+            var outputElement = document.getElementById("output");
+            outputElement.innerHTML = "開かないようだ。";
+        }
+
+		function showOutput2(){
+			var outputElement = document.getElementById("output");
+            outputElement.innerHTML = "開いたようだ…！";
+
+			const turnbutton = document.getElementById("turnbutton");
+			const openbutton = document.getElementById("openbutton");
+			const backbutton = document.getElementById("backbutton");
+			turnbutton.disabled = "disabled";
+			openbutton.disabled = "disabled";
+			backbutton.disabled = "disabled";
+		}
+
+    </script>
+  </head>
+
+  <body onload="threeStart();">
+    <div id="canvas-frame"></div>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>脱出ゲーム</title>
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+    }
+    #backbutton{
+        margin: 30px;
+    }
+    </style>
+    <script>
+        function showOutput() {
+            var outputElement = document.getElementById("output");
+            outputElement.innerHTML = "鍵穴の形が何かに似ているようだ";
+        }
+    </script>
+</head>
+<body>
+    <p>ヒントが欲しいですか？</p>
+    <button onclick="showOutput()">はい</button>
+    <div id="output"></div>
+
+    <button id = "backbutton", onclick="location.href='room3.html'">戻る</button>
+</body>
+</html>

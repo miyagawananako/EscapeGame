@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>脱出ゲーム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #844307;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        #key {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            text-align: center;
+            margin: 0;
+        }
+
+        p {
+            font-size: 24px;
+            margin-top: 50px;
+        }
+
+        button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 24px;
+            border-radius: 5px;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            background-color: #000;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        #backbutton{
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 24px;
+            border-radius: 5px;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            background-color: #000;
+            background-color: white;
+            color: #000;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin: 5px;
+        }
+        #heart{
+            color: red;
+        }
+        
+    </style>
+</head>
+<body>
+    <div id="key">
+        <p>Please input number!!</p>
+        <div id="heart">
+            ♡
+            <input type="text" maxlength="100" placeholder="" id="number">
+        </div>
+        <p>
+            <button id ="決定">決定</button>
+        </p>
+
+        <div id="output"></div>
+
+        <p><button id="backbutton", onclick="location.href='box2.html'">戻る</button></p>
+    </div>
+
+    <audio id="btn_audio">
+        <source src="blip02.mp3" type="audio/mp3">
+    </audio>
+    <audio id="btn_audio3">
+		<source src="locking_a_wooden_door2.mp3" type="audio/mp3">
+	</audio>
+
+    <script>
+        function audio() {
+            document.getElementById('btn_audio').currentTime = 0; //連続クリックに対応
+            document.getElementById('btn_audio').play(); //クリックしたら音を再生
+        }
+        function audio3() {
+            document.getElementById('btn_audio3').currentTime = 0; //連続クリックに対応
+            document.getElementById('btn_audio3').play(); //クリックしたら音を再生
+        }
+
+        function showOutput() {
+            var outputElement = document.getElementById("output");
+            outputElement.innerHTML = "間違っているようだ";
+        }
+
+        function showOutput2() {
+            var outputElement = document.getElementById("output");
+            outputElement.innerHTML = "合っているようだ…！";
+        }
+
+        document.getElementById("決定").onclick = function() {
+            const name = document.getElementById("number").value;
+            if(name =="8" || name =="８" || name =="八"){
+                audio3();
+                showOutput2();
+                setTimeout('window.location.href = "room3.html";', 2000);
+            }
+            else{
+                showOutput();
+                audio();
+            }
+        }
+    </script>
+</body>
+</html>

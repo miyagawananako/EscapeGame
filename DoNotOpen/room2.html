@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>脱出ゲーム</title>
+
+    <style type="text/css">
+      div#canvas-frame{
+	  border: none;
+	  cursor: pointer;
+	  width: 1200px;
+	  height: 900px;
+	  background-color: white;
+      }
+      #paperbutton{
+	  margin-left: 30px;
+      }
+    </style>
+
+    <audio controls src="堕ちる.mp3"></audio>
+    <div id="output", style= "display: inline-block; _display: inline;"></div>
+    <button id="drinkbutton", onclick="drink()">瓶の中身を飲む</button>
+    <button id="timechangebutton", onclick="location.href='room.html'">昼の時刻の部屋に来る</button> 
+    <button id="paperbutton", onclick="location.href='paper2.html'">紙を見る</button>
+
+    <audio id="btn_audio_drink">
+      <source src="drinking1.mp3" type="audio/mp3">
+    </audio>
+
+</div>
+<script src="three.min.js"></script>
+<script src="https://unpkg.com/three@0.131.3/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+  //https://www.is.ocha.ac.jp/~yuki/CG/homework-WebGL.html
+
+  //これからすること、カーテンの設置、左の壁の設置、天井の設置、ゲームの設計、机の上に置くボックスの設計
+  var width, height;
+  var renderer;
+  function initThree() {
+      width = document.getElementById('canvas-frame').clientWidth;
+      height = document.getElementById('canvas-frame').clientHeight;  
+      renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setSize(width, height );
+      document.getElementById('canvas-frame').appendChild(renderer.domElement);
+      renderer.setClearColorHex(0xffffff, 1.0);
+      renderer.shadowMapEnabled = true;
+  }
+
+
+  var camera;
+  var controls;
+  function initCamera() {  
+      camera = new THREE.PerspectiveCamera( 45 , width / height , 1 , 10000 );
+      camera.position.x = 1100;
+      camera.position.y = -80;
+      camera.position.z = 400;
+      camera.up.x = 0;
+      camera.up.y = 0;
+      camera.up.z = 1;
+      camera.lookAt( {x:0, y:0, z:0 } );
+  }
+
+
+  var scene;
+  function initScene() {    
+      scene = new THREE.Scene();
+  }
+
+
+  var light, light2;
+  function initLight2() {  
+      light = new THREE.DirectionalLight(0xffc68c, 1.0, 0);
+      light.position.set( 50, -30, 100 ); //yをマイナスにすると壁が明るくなって見える
+      light.castShadow = true;    
+      scene.add(light);
+      light2 = new THREE.AmbientLight(0x555555);
+      scene.add(light2);
+  }
+
+  const tile_side_length = 20;
+  const side_length = tile_side_length**2; // 20**2
+
+  var leg = Array();
+  var cylinder
+  var plane = Array();
+  var tile = Array();
+  var trump_heart = Array();
+  var wall_back, door, knob, hole, wall_left, tree, stem, pot, pot_edge, face, eye_right, eye_left, leg_right, leg_left, arm_right, arm_left, hand_right, hand_left,
+      clock, clock_frame, long_hand, short_hand, soldier, box, box_line, box_key, bin_bottom, bin_top, bin_spout;
+  var character = Array();
+  var rose = Array();
+  var shelf = Array();
+  var shelf2 = Array();
+  var book = Array();
+  var pages = Array();
+  var book_spine = Array();
+  var heart1 = Array();
+  var heart2 = Array();
+  var heart3 = Array();
+  var heart4 = Array();
+  var heart5 = Array();
+  var heart6 = Array();
+  var sand = Array();
+
+  function initObject(){
+      var roomobjects = new THREE.Group(); //メッシュをグループ化
+      soldier = new THREE.Group(); //メッシュをグループ化
+      // 机の脚を生成
+      const legPositions = [
+	  { x: -50, y: -50 },
+	  { x: 50, y: 50 },
+	  { x: -50, y: 50 },
+	  { x: 50, y: -50 }
+      ];
+      legPositions.forEach(position => {
+	  const leg = new THREE.Mesh(
+	      new THREE.CubeGeometry(10, 10, 50),
+	      new THREE.MeshLambertMaterial({ color: 0x800000, ambient: 0x8b4513 })
+	  );
+	  leg.position.set(position.x, position.y, 25);
+	  roomobjects.add(leg);
+	  leg.castShadow = true;
+      });
+      
+      cylinder = new THREE.Mesh(
+	  new THREE.CylinderGeometry(100, 100, 10, 32),
+	  new THREE.MeshLambertMaterial({ color: 0x800000, ambient:0x8b4513 })
+      );
+      roomobjects.add(cylinder);
+      cylinder.rotation.x = Math.PI / 2
+      cylinder.position.set(0, 0, 50);
+      cylinder.castShadow = true;
+
+      bin_bottom = new THREE.Mesh(
+	  new THREE.CylinderGeometry(6, 6, 18, 32),
+	  new THREE.MeshPhongMaterial({ color: 0x00bfff, ambient:0x8b4513 })
+      );
+      roomobjects.add(bin_bottom);
+      bin_bottom.rotation.x = Math.PI / 2
+      bin_bottom.position.set(0, 0 +50, 50+10);
+      bin_bottom.castShadow = true;
+
+      bin_top = new THREE.Mesh(
+	  new THREE.CylinderGeometry(4, 6, 5, 32),
+	  new THREE.MeshPhongMaterial({ color: 0x00bfff, ambient:0x8b4513 })
+      );
+      roomobjects.add(bin_top);
+      bin_top.rotation.x = Math.PI / 2
+      bin_top.position.set(0, 0 +50, 50+10 + 18/2 +2);
+      bin_top.castShadow = true;
+
+      bin_spout = new THREE.Mesh(
+	  new THREE.TorusGeometry ( 4.5, 0.5, 16, 100 ),
+	  new THREE.MeshPhongMaterial({ color: 0x00bfff, ambient:0x8b4513 })
+      );
+      roomobjects.add(bin_spout);
+      bin_spout.position.set(0, 0 +50, 50+10 + 20/2 +2 +1.9);
+      bin_spout.castShadow = true;
+
+      paper = new THREE.Mesh(
+	  new THREE.CubeGeometry(70,50,1),
+	  new THREE.MeshLambertMaterial({color: 0xffffff,ambient:0x8b4513})
+      );
+      roomobjects.add(paper);
+      paper.position.set(0,0,55);
+      paper.castShadow = true;
+
+      for(var i=0; i<2; i++){
+	  character[i] = new THREE.Mesh(
+	      new THREE.CylinderGeometry(1, 1, 30, 32),
+	      new THREE.MeshLambertMaterial({ color: 0x000000, ambient:0x8b4513 })
+	  );
+	  roomobjects.add(character[i]);
+	  character[i].position.set(-10 +10*i,0,55);
+	  character[i].castShadow = true;
+      }
+
+      // 床
+      for(var i=0; i<20; i++){
+	  for(var j=0; j<40; j++){
+	      if((i%2==0 && j%2==1) || (i%2 ==1 && j%2==0)){
+		  plane[i] = new THREE.Mesh(
+		      new THREE.PlaneGeometry(20, 20),                 
+		      new THREE.MeshLambertMaterial({color: 0xffffff, ambient:0x8b4513 }) 
+		  );
+	      }
+	      else{
+		  plane[i] = new THREE.Mesh(
+		      new THREE.PlaneGeometry(20, 20),                 
+		      new THREE.MeshLambertMaterial({color: 0x000000, ambient:0x8b4513 }) 
+		  );
+	      }
+	      roomobjects.add(plane[i]);
+	      plane[i].position.set(-side_length/2 +  + 20/2 +20*i,-side_length + 20/2 + 20*j,0);
+	      plane[i].receiveShadow = true;
+	  }
+      }
+
+
+      // 右のタイル
+      tile_color = [0xff0000, 0xFFFFFF, 0xff69b4]; //red, white, pink
+      var randnumber = [];
+      for(var i=0; i<side_length; i++){
+	  randnumber[i] = Math.floor(Math.random() * 3); //乱数はiだけ
+      };
+
+      var pinklist = [[18,4], [ 18, 8 ],
+		      [ 17, 9 ],
+		      [ 15, 1 ],
+		      [ 10, 1 ],
+		      [ 7, 4 ],
+		      [ 6, 5 ],
+		      [ 5, 6 ],
+		      [ 4, 7 ],
+		      [ 1, 9 ] ];
+
+      var forloop = pinklist.length;
+      for(var i=0; i<forloop; i++){
+	  console.log([pinklist[i][0], (20-1)-pinklist[i][1]]);
+	  pinklist.push([pinklist[i][0], (20-1)-pinklist[i][1]]);
+      };
+      console.log(pinklist);
+
+      var whitelist = [];
+      whitelist.push(
+	  [0,0], [0,1], [0,2], [0,3], [0,4], [0,5], [0,6], [0,7], [0,8], [0,9],
+	  [1,0], [1,1], [1,2], [1,3], [1,4], [1,5], [1,6], [1,7], [1,8],
+	  [2,0], [2,1], [2,2], [2,3], [2,4], [2,5], [2,6], [2,7], [2,8],
+	  [3,0], [3,1], [3,2], [3,3], [3,4], [3,5], [3,6], [3,7], 
+	  [4,0], [4,1], [4,2], [4,3], [4,4], [4,5], [4,6],
+	  [5,0], [5,1], [5,2], [5,3], [5,4], [5,5],
+	  [6,0], [6,1], [6,2], [6,3], [6,4],
+	  [7,0], [7,1], [7,2], [7,3],
+	  [8,0], [8,1], [8,2],
+	  [9,0], [9,1],
+	  [10,0],
+	  [11,0],
+	  [12,0],
+	  [13,0],
+	  [14,0],
+	  [15,0],
+	  [16,0], [16,1],
+	  [17,0], [17,1], [17,2],
+	  [18,0], [18,1], [18,2], [18,3], [18,9],
+	  [19,0], [19,1], [19,2], [19,3], [19,4], [19,5], [19,6], [19,7], [19,8], [19,9]
+      );
+      forloop = whitelist.length;
+      for(var i=0; i<forloop; i++){
+          whitelist.push([whitelist[i][0], (20-1)-whitelist[i][1]]);
+      };
+
+      var pinkflag, whiteflag;
+      for(var j=0; j<tile_side_length; j++){
+	  for(var i=0; i<tile_side_length; i++){
+	      pinkflag = false;
+	      whiteflag = false;
+	      for(var k=0; k<pinklist.length; k++){
+		  if(pinklist[k][0] == j && pinklist[k][1] ==i){
+		      pinkflag = true;
+		  }
+	      }
+	      for(var k=0; k<whitelist.length; k++){
+		  if(whitelist[k][0] == j && whitelist[k][1] ==i){
+		      whiteflag = true;
+		  }
+	      }
+	      if(pinkflag){
+		  tile[i] = new THREE.Mesh(
+		      new THREE.PlaneGeometry(20,20),
+		      new THREE.MeshLambertMaterial({color: tile_color[2], ambient: 0xa9a9a9a}) //pink
+		  );
+		  trump_heart[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(6,5,5),
+		      new THREE.MeshLambertMaterial({color: tile_color[2]})
+		  );
+		  heart1[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[2]})
+		  );
+		  heart2[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[2]})
+		  );
+		  heart3[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[2]})
+		  );
+		  heart4[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[2]})
+		  );
+		  heart5[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[2]})
+		  );
+		  heart6[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[2]})
+		  );
+	      }
+	      else if(whiteflag){
+		  tile[i] = new THREE.Mesh(
+		      new THREE.PlaneGeometry(20,20),
+		      new THREE.MeshLambertMaterial({color: tile_color[1], ambient: 0xa9a9a9a}) //white
+		  );
+		  trump_heart[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(6,5,5),
+		      new THREE.MeshLambertMaterial({color: tile_color[1]})
+		  );
+		  heart1[i]= new THREE.Mesh(
+		      new THREE.CubeGeometry(0.1,0.1,0.1),
+		      new THREE.MeshLambertMaterial({color: tile_color[1], ambient: 0xa9a9a9a})
+		  );
+		  heart2[i]= new THREE.Mesh(
+		      new THREE.CubeGeometry(0.1,0.1,0.1),
+		      new THREE.MeshLambertMaterial({color: tile_color[1], ambient: 0xa9a9a9a})
+		  );
+		  heart3[i]= new THREE.Mesh(
+		      new THREE.CubeGeometry(0.1,0.1,0.1),
+		      new THREE.MeshLambertMaterial({color: tile_color[1], ambient: 0xa9a9a9a})
+		  );
+		  heart4[i]= new THREE.Mesh(
+		      new THREE.CubeGeometry(0.1,0.1,0.1),
+		      new THREE.MeshLambertMaterial({color: tile_color[1], ambient: 0xa9a9a9a})
+		  );
+		  heart5[i]= new THREE.Mesh(
+		      new THREE.CubeGeometry(0.1,0.1,0.1),
+		      new THREE.MeshLambertMaterial({color: tile_color[1], ambient: 0xa9a9a9a})
+		  );
+		  heart6[i]= new THREE.Mesh(
+		      new THREE.CubeGeometry(0.1,0.1,0.1),
+		      new THREE.MeshLambertMaterial({color: tile_color[1], ambient: 0xa9a9a9a})
+		  );
+	      }
+	      else{
+		  tile[i] = new THREE.Mesh(
+		      new THREE.PlaneGeometry(20,20),
+		      new THREE.MeshLambertMaterial({color: tile_color[0], ambient: 0xa9a9a9a}) //red
+		  );
+		  trump_heart[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(6,5,5),
+		      new THREE.MeshLambertMaterial({color: tile_color[0], ambient: 0xa9a9a9a})
+		  );
+		  heart1[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[0], ambient: 0xa9a9a9a})
+		  );
+		  heart2[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[0], ambient: 0xa9a9a9a})
+		  );
+		  heart3[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[0], ambient: 0xa9a9a9a})
+		  );
+		  heart4[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[0], ambient: 0xa9a9a9a})
+		  );
+		  heart5[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[0], ambient: 0xa9a9a9a})
+		  );
+		  heart6[i] = new THREE.Mesh(
+		      new THREE.CubeGeometry(1,1,1),
+		      new THREE.MeshLambertMaterial({color: tile_color[0], ambient: 0xa9a9a9a})
+		  );
+	      }
+	      roomobjects.add(tile[i]);
+	      tile[i].rotation.x = Math.PI / 2;
+	      tile[i].position.set(-side_length/2 + tile_side_length/2 + tile_side_length*i, side_length, tile_side_length/2 + tile_side_length*j);
+	      tile[i].castShadow = true;
+
+	      roomobjects.add(trump_heart[i]);
+	      soldier.add(trump_heart[i]);
+	      trump_heart[i].rotation.y = Math.PI / 2;
+	      trump_heart[i].position.set(-50,-200+ 5*i, 20 + 6*j );
+	      trump_heart[i].castShadow = true;
+
+	      roomobjects.add(heart1[i]);
+	      heart1[i].rotation.y = Math.PI / 2;
+	      heart1[i].position.set(-side_length/2, -150+ 1*i, side_length/2 + 1*j );
+              
+	      roomobjects.add(heart2[i]);
+	      heart2[i].rotation.y = Math.PI / 2;
+	      heart2[i].position.set(-side_length/2, -250+ 1*i, 75 + 1*j );
+
+	      roomobjects.add(heart3[i]);
+	      heart3[i].rotation.y = Math.PI / 2;
+	      heart3[i].position.set(-side_length/2, -300+ 1*i, 230 + 1*j );
+
+	      roomobjects.add(heart4[i]);
+	      heart4[i].rotation.y = Math.PI / 2;
+	      heart4[i].position.set(-side_length/2, 120+ 1*i, 140 + 1*j );
+
+	      roomobjects.add(heart5[i]);
+	      heart5[i].rotation.y = Math.PI / 2;
+	      heart5[i].position.set(-side_length/2, 200+ 1*i, 300 + 1*j );
+
+	      roomobjects.add(heart6[i]);
+	      heart6[i].rotation.y = Math.PI / 2;
+	      heart6[i].position.set(-side_length/2, 300+ 1*i, 230 + 1*j );
+          };
+      };
+
+      face = new THREE.Mesh(
+	  new THREE.CylinderGeometry(20, 20, 6, 32),
+	  new THREE.MeshLambertMaterial({ color: 0xff0000 , ambient:0x8b4513 })
+      );
+      roomobjects.add(face);
+      soldier.add(face);
+      face.rotation.z = Math.PI / 2
+      face.position.set(-50, -200+5*10, 30 +6*20);
+      face.castShadow = true;
+
+      arm_right = new THREE.Mesh(
+	  new THREE.CylinderGeometry(3, 3, 70, 32),
+	  new THREE.MeshLambertMaterial({ color: 0xffffff})
+      );
+      roomobjects.add(arm_right);
+      soldier.add(arm_right);
+      arm_right.rotation.x = Math.PI / (-2.3);
+      arm_right.position.set(-50, -200+5*10 +53, 70);
+      arm_right.castShadow = true;
+      
+      arm_left = new THREE.Mesh(
+	  new THREE.CylinderGeometry(3, 3, 70, 32),
+	  new THREE.MeshLambertMaterial({ color: 0xffffff})
+      );
+      roomobjects.add(arm_left);
+      soldier.add(arm_left);
+      arm_left.rotation.x = Math.PI / (2.3);
+      arm_left.position.set(-50, -200+5*10 -53 -5, 70);
+      arm_left.castShadow = true;
+
+      hand_right = new THREE.Mesh(
+	  new THREE.SphereGeometry(6, 32),
+	  new THREE.MeshLambertMaterial({ color: 0xff0000, ambient:0x8b4513})
+      );
+      roomobjects.add(hand_right);
+      soldier.add(hand_right);
+      hand_right.position.set(-50, -200+5*10 +53 + 7, 70 - 35);
+      hand_right.castShadow = true;
+
+      hand_left = new THREE.Mesh(
+	  new THREE.SphereGeometry(6, 32),
+	  new THREE.MeshLambertMaterial({ color: 0xff0000, ambient:0x8b4513})
+      );
+      roomobjects.add(hand_left);
+      soldier.add(hand_left);
+      hand_left.position.set(-50, -200+5*10 -53 -5 - 7, 70 - 35);
+      hand_left.castShadow = true;
+
+      leg_right = new THREE.Mesh(
+	  new THREE.SphereGeometry( 18, 32, 32, 0, Math.PI ),
+	  new THREE.MeshLambertMaterial({ color: 0xff0000, ambient:0x8b4513 })
+      );
+      roomobjects.add(leg_right);
+      soldier.add(leg_right);
+      leg_right.position.set(-50, -200+5*10 +48, 5/2 +1);
+      leg_right.castShadow = true;
+
+      leg_left = new THREE.Mesh(
+	  new THREE.SphereGeometry( 18, 32, 32, 0 , Math.PI ),
+	  new THREE.MeshLambertMaterial({ color: 0xff0000, ambient:0x8b4513 })
+      );
+      roomobjects.add(leg_left);
+      soldier.add(leg_left);
+      leg_left.position.set(-50, -200+5*10 -48, 5/2 +1);
+      leg_left.castShadow = true;
+
+      // 奥の壁
+      wall_back = new THREE.Mesh(
+	  new THREE.PlaneGeometry(side_length*2, side_length),
+	  new THREE.MeshLambertMaterial({color: 0xffffff, ambient: 0xa9a9a9a})
+      );
+      roomobjects.add(wall_back);
+      wall_back.rotation.x = Math.PI / 2; // 壁を水平に配置するために90度回転
+      wall_back.rotation.y = Math.PI / 2;
+      wall_back.position.set(-side_length/2, 0, side_length/2);
+      wall_back.castShadow = true;
+
+      for(var i=0; i<3; i++){
+	  shelf[i] = new THREE.Mesh(
+	      new THREE.CubeGeometry(70, 170, 5),
+	      new THREE.MeshLambertMaterial({color: 0xffffff, ambient: 0xa9a9a9a})
+	  );
+	  roomobjects.add(shelf[i]);
+	  shelf[i].position.set(-side_length/2 + 70/2, side_length- 170/2, 5/2 + 50*i);
+	  shelf[i].castShadow = true;
+      }
+
+      for(var i=0; i<2; i++){
+	  shelf2[i] = new THREE.Mesh(
+	      new THREE.CubeGeometry(70, 5, 50*2),
+	      new THREE.MeshLambertMaterial({color: 0xffffff, ambient: 0xa9a9a9a})
+	  );
+	  roomobjects.add(shelf2[i]);
+	  shelf2[i].position.set(-side_length/2 + 70/2, side_length - 5/2 - 165*i, 50*2/2);
+	  shelf2[i].castShadow = true;
+      }
+
+      for(var i=0; i<6; i++){
+	  book[i] = new THREE.Mesh(
+	      new THREE.CubeGeometry(60, 5, 35),
+	      new THREE.MeshLambertMaterial({color: 0x8b4513, ambient: 0xa9a9a9a})
+	  );
+	  roomobjects.add(book[i]);
+	  book[i].position.set(-side_length/2 + 60/2, side_length- 170 +5 + 5  + 6*i, 5+35/2 + 50);
+	  book[i].castShadow = true;
+
+	  book_spine[i] = new THREE.Mesh(
+	      new THREE.CylinderGeometry(4, 4, 34, 32),
+	      new THREE.MeshLambertMaterial({color: 0x8b4513, ambient: 0xa9a9a9a})
+	  );
+	  roomobjects.add(book_spine[i]);
+	  book_spine[i].rotation.x = Math.PI / 2
+	  book_spine[i].position.set(-side_length/2 + 60 -3, side_length- 170 +5 + 5  + 6*i, 5+35/2 + 50);
+	  book_spine[i].castShadow = true;
+
+	  pages[i] = new THREE.Mesh(
+	      new THREE.CubeGeometry(58, 4, 0.5),
+	      new THREE.MeshLambertMaterial({color: 0xffffff, ambient: 0xa9a9a9a})
+	  );
+	  roomobjects.add(pages[i]);
+	  pages[i].position.set(-side_length/2 + 60/2, side_length- 170 +5 + 5  + 6*i, 5+35/2 + 50 + 35/2);
+	  pages[i].castShadow = true;
+      }
+
+      const geometry = new THREE.BoxGeometry( side_length/3, side_length/3*2, 1 );
+      const material = new THREE.MeshBasicMaterial( {color: 0x000000, ambient: 0x696969} );
+      door = new THREE.Mesh( geometry, material );
+      roomobjects.add(door);
+      door.rotation.x = Math.PI / 2; // 壁を水平に配置するために90度回転
+      door.rotation.y = Math.PI / 2;
+      door.position.set(-side_length/2, 0, side_length/3*2/2);
+      door.castShadow = true;
+
+      knob = new THREE.Mesh(
+	  new THREE.CylinderGeometry(5, 5, 10, 32),
+	  new THREE.MeshPhongMaterial({ color: 0xffffff})
+      );
+      roomobjects.add(knob);
+      knob.rotation.z = Math.PI / 2
+      knob.position.set(-side_length/2, side_length/3/2 - 15, side_length/3*2/2);
+      knob.castShadow = true;
+
+      hole = new THREE.Mesh(
+	  new THREE.CylinderGeometry(0.5, 0.5, 8, 32),
+	  new THREE.MeshLambertMaterial({ color: 0x000000, ambient:0x8b4513 })
+      );
+      roomobjects.add(hole);
+      hole.rotation.x = Math.PI / 2
+      hole.position.set(-side_length/2 + 10/2, side_length/3/2 - 15, side_length/3*2/2);
+      hole.castShadow = true;
+
+      tree = new THREE.Mesh(
+	  new THREE.CylinderGeometry(0, 40, 100, 32),
+	  new THREE.MeshLambertMaterial({ color: 0x006400, ambient:0x8b4513 })
+      );
+      roomobjects.add(tree);
+      tree.rotation.x = Math.PI / 2
+      tree.position.set(-40, -300, 125);
+      tree.castShadow = true;
+
+      for(var i=0; i<3; i++){
+	  rose[i] = new THREE.Mesh(
+	      new THREE.SphereGeometry(7, 32, 32),
+	      new THREE.MeshLambertMaterial({ color: tile_color[0],  ambient:0x8b4513 })
+	  );
+	  roomobjects.add(rose[i]);
+	  if(i == 0){
+	      rose[i].position.set(-40 +20, -300, 125 +5);
+	  }
+	  if(i == 1){
+	      rose[i].position.set(-40 +23, -300 +20, 100);
+	  }
+	  if(i == 2){
+	      rose[i].position.set(-40 +25, -300 -20, 125 - 30);
+	  }
+	  rose[i].castShadow = true;
+      }
+
+      stem = new THREE.Mesh(
+	  new THREE.CylinderGeometry(5, 5, 100, 32),
+	  new THREE.MeshLambertMaterial({ color: 0x542D24, ambient:0x8b4513 })
+      );
+      roomobjects.add(stem);
+      stem.rotation.x = Math.PI / 2
+      stem.position.set(-40, -300, 75);
+      stem.castShadow = true;
+
+      pot = new THREE.Mesh(
+	  new THREE.CylinderGeometry(30, 20, 40, 32),
+	  new THREE.MeshLambertMaterial({ color: 0x542D24, ambient:0x8b4513 })
+      );
+      roomobjects.add(pot);
+      pot.rotation.x = Math.PI / 2
+      pot.position.set(-40, -300, 40/2);
+      pot.castShadow = true;
+
+      pot_edge = new THREE.Mesh(
+	  new THREE.TorusGeometry (30, 2.5, 16, 100) ,
+	  new THREE.MeshLambertMaterial({ color: 0x542D24, ambient:0x8b4513 })
+      );
+      roomobjects.add(pot_edge);
+      pot_edge.position.set(-40, -300, 40);
+      pot_edge.castShadow = true;
+
+      for(let i=0; i<100; i++){
+          var x = 25 * Math.sqrt(Math.random());
+          var param = 2 * Math.PI/ 100 * i;
+          sand[i] = new THREE.Mesh(
+              new THREE.SphereGeometry(1.5, 32, 32),
+              new THREE.MeshLambertMaterial({ color: 0x542D24, ambient:0x8b4513 })
+	  );
+          roomobjects.add(sand[i]);
+          sand[i].position.set(-40 +x*Math.cos(param), -300 + x*Math.sin(param), 40/2+40/2 -0.5);
+          sand[i].castShadow = true;
+      }
+
+      clock = new THREE.Mesh(
+	  new THREE.CylinderGeometry(30, 30, 10, 32),
+	  new THREE.MeshPhongMaterial({color: 0xffffff})
+      );
+      roomobjects.add(clock);
+      clock.shininess = 1000;
+      clock.rotation.z = Math.PI / 2
+      clock.position.set(-side_length/2, -200, 330);
+      clock.castShadow = true;
+
+      clock_frame = new THREE.Mesh(
+	  new THREE.TorusGeometry ( 30, 3, 16, 100 ),
+	  new THREE.MeshPhongMaterial({ color: 0xff0000, ambient:0x8b4513 })
+      );
+      roomobjects.add(clock_frame);
+      clock_frame.shininess = 1000;
+      clock_frame.rotation.y = Math.PI / 2
+      clock_frame.position.set(-side_length/2 +5, -200, 330);
+      clock_frame.castShadow = true;
+
+      long_hand = new THREE.Mesh(
+	  new THREE.CylinderGeometry(1, 1, 25, 32),
+	  new THREE.MeshLambertMaterial({ color: 0x000000, ambient:0x8b4513 })
+      );
+      roomobjects.add(long_hand);
+      long_hand.rotation.x = Math.PI / 2
+      long_hand.position.set(-side_length/2 +5, -200, 330 + 30/2 -5);
+      long_hand.castShadow = true;
+
+      short_hand = new THREE.Mesh(
+	  new THREE.CylinderGeometry(1, 1, 20, 32),
+	  new THREE.MeshLambertMaterial({ color: 0x000000, ambient:0x8b4513 })
+      );
+      roomobjects.add(short_hand);
+      short_hand.rotation.x = Math.PI / 4*3;
+      short_hand.position.set(-side_length/2 +5, -200 + 7, 330 + 30/2 -22);
+      short_hand.castShadow = true;
+
+      box = new THREE.Mesh(
+	  new THREE.CubeGeometry(30,50,20),
+	  new THREE.MeshLambertMaterial({color: 0x8b4513, ambient:0x8b4513})
+      );
+      roomobjects.add(box);
+      box.position.set(0, 0, 0 + 20/2);
+      box.castShadow = true;
+
+      /*box_top = new THREE.Mesh(
+	new THREE.CylinderGeometry(30/2,30/2,50,32),
+	new THREE.MeshLambertMaterial({color: 0x8b4513, ambient:0x8b4513})
+	);
+	roomobjects.add(box_top);
+	box_top.position.set(0, 0, 0 + 20);
+	box_top.castShadow = true;
+
+	box_line = new THREE.Mesh(
+	new THREE.CylinderGeometry(1,1,50,32),
+	new THREE.MeshLambertMaterial({color: 0x000000, ambient:0x8b4513})
+	);
+	roomobjects.add(box_line);
+	box_line.position.set(0 + 30/2, 0, 0 + 20);
+	box_line.castShadow = true;*/
+
+      box_key = new THREE.Mesh(
+	  new THREE.CubeGeometry(3,10,10),
+	  new THREE.MeshLambertMaterial({color: 0xffffff, ambient:0x8b4513})
+      );
+      roomobjects.add(box_key);
+      box_key.position.set(0 + 30/2, 0, 0 + 20);
+      box_key.castShadow = true;
+
+      scene.add(roomobjects);
+      scene.add(soldier);
+  }
+
+  var t = 0;
+  function loop() {
+      t++;
+      renderer.clear();
+      soldier.rotation.set( 0, 0, t/100 );
+      //cube[0].rotation.set( t/100, 0, 0 );
+      //camera.position.set( 1000*Math.cos(t/100), 400*Math.sin(t/200), 50*Math.cos(t/50));
+      camera.lookAt( {x:0, y:0, z:0 } );    
+      renderer.render(scene, camera);
+      window.requestAnimationFrame(loop);
+  }  
+
+  function threeStart2() {
+      initThree();
+      initCamera();
+      initScene();    
+      initLight2();
+      initObject();
+      loop();
+  }
+
+  function audio_drink(){
+      document.getElementById('btn_audio_drink').currentTime = 0; //連続クリックに対応
+      document.getElementById('btn_audio_drink').play(); //クリックしたら音を再生
+  }
+  function showOutput() {
+      var outputElement = document.getElementById("output");
+      outputElement.innerHTML = "体に異変が…。";
+
+      const drinkbutton = document.getElementById("drinkbutton");
+      const timechangebutton = document.getElementById("timechangebutton");
+      const paperbutton = document.getElementById("paperbutton");
+      drinkbutton.disabled = "disabled";
+      timechangebutton.disabled = "disabled";
+      paperbutton.disabled = "disabled";
+  }
+
+  function drink(){
+      audio_drink();
+      showOutput();
+      setTimeout('window.location.href = "box2.html";', 1500);
+  }
+</script>
+</head>
+
+<body onload="threeStart2();">
+  <div id="canvas-frame"></div>
+</body>
+</html>
